@@ -25,7 +25,8 @@ local Window = Rayfield:CreateWindow({
       FolderName = "BloxStrikeManus",
       FileName = "Config"
    },
-   KeySystem = false
+   KeySystem = false,
+   ToggleUIKeybind = Enum.KeyCode.F4 -- Definir F4 como a tecla para abrir/fechar o UI
 })
 
 -- Variables for Config
@@ -35,7 +36,8 @@ local Config = {
         Smoothness = 0.1,
         FOV = 100,
         ShowFOV = true,
-        TargetPart = "Head"
+        TargetPart = "Head",
+        ActivationKey = Enum.KeyCode.MouseButton2 -- Botão direito do mouse como padrão para ativar o Aimbot
     },
     SilentAim = {
         Enabled = false,
@@ -80,6 +82,11 @@ CombatTab:CreateToggle({
    Name = "Enable Aimbot",
    CurrentValue = false,
    Callback = function(Value) Config.Aimbot.Enabled = Value end,
+})
+CombatTab:CreateKeybind({
+   Name = "Aimbot Activation Key",
+   CurrentKey = Enum.KeyCode.MouseButton2,
+   Callback = function(Key) Config.Aimbot.ActivationKey = Key end,
 })
 CombatTab:CreateSlider({
    Name = "Aimbot Smoothness",
@@ -229,7 +236,14 @@ end
 
 -- Aimbot Loop
 RunService.RenderStepped:Connect(function()
-    if Config.Aimbot.Enabled then
+    local isPressed = false
+    if Config.Aimbot.ActivationKey.Name:find("MouseButton") then
+        isPressed = UserInputService:IsMouseButtonPressed(Config.Aimbot.ActivationKey)
+    else
+        isPressed = UserInputService:IsKeyDown(Config.Aimbot.ActivationKey)
+    end
+
+    if Config.Aimbot.Enabled and isPressed then
         local target = GetClosestPlayer(Config.Aimbot.FOV)
         if target and target.Character and target.Character:FindFirstChild(Config.Aimbot.TargetPart) then
             local targetPart = target.Character:FindFirstChild(Config.Aimbot.TargetPart)
