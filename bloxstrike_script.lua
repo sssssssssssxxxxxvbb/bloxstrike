@@ -1,216 +1,32 @@
 --[[
-    BloxStrike Full Script
-    Features: Aimbot (Configurable), Smooth FOV, Silent Aim (Configurable FOV), 
-              ESP Box, ESP Skeleton, Unlock All Skins (Skin Changer)
+    BloxStrike Simplified Script
+    Features: Aimbot (Right Mouse Button activation), ESP Box, ESP Skeleton
     Compatibility: Xeno Executor
-    UI: Minimalist & Clean Hub
+    No UI - Always active (Aimbot on key press, ESP always on)
 ]]
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
--- UI Library (Using a minimalist and clean one)
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-
-local Window = Rayfield:CreateWindow({
-   Name = "BloxStrike Hub | Minimalist",
-   LoadingTitle = "BloxStrike Script",
-   LoadingSubtitle = "by Manus AI",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "BloxStrikeManus",
-      FileName = "Config"
-   },
-   KeySystem = false,
-   ToggleUIKeybind = Enum.KeyCode.F4 -- Definir F4 como a tecla para abrir/fechar o UI
-})
-
--- Variables for Config
+-- Configuration (Hardcoded for simplicity)
 local Config = {
     Aimbot = {
-        Enabled = false,
-        Smoothness = 0.1,
-        FOV = 100,
-        ShowFOV = true,
+        Enabled = true, -- Aimbot is always enabled, activated by key
+        Smoothness = 0.1, -- Default smoothness
+        FOV = 150, -- Default FOV for target detection
         TargetPart = "Head",
-        ActivationKey = Enum.KeyCode.MouseButton2 -- Botão direito do mouse como padrão para ativar o Aimbot
-    },
-    SilentAim = {
-        Enabled = false,
-        FOV = 100,
-        ShowFOV = true,
-        HitChance = 100
+        ActivationKey = Enum.KeyCode.MouseButton2 -- Right Mouse Button to activate Aimbot
     },
     ESP = {
-        Box = false,
-        Skeleton = false,
-        TeamCheck = true,
-        Color = Color3.fromRGB(255, 255, 255)
-    },
-    Skins = {
-        UnlockAll = false,
-        SelectedKnife = "Butterfly Knife",
-        SelectedGlove = "T Glove"
+        Box = true, -- ESP Box always on
+        Skeleton = true, -- ESP Skeleton always on
+        TeamCheck = true, -- Team check always on
+        Color = Color3.fromRGB(255, 255, 255) -- White color for ESP
     }
 }
-
--- FOV Circles
-local AimbotFOV = Drawing.new("Circle")
-AimbotFOV.Thickness = 1
-AimbotFOV.Color = Color3.fromRGB(255, 255, 255)
-AimbotFOV.Filled = false
-AimbotFOV.Transparency = 0.5
-
-local SilentAimFOV = Drawing.new("Circle")
-SilentAimFOV.Thickness = 1
-SilentAimFOV.Color = Color3.fromRGB(255, 0, 0)
-SilentAimFOV.Filled = false
-SilentAimFOV.Transparency = 0.5
-
--- Tabs
-local CombatTab = Window:CreateTab("Combat", 4483362458)
-local VisualsTab = Window:CreateTab("Visuals", 4483362458)
-local SkinsTab = Window:CreateTab("Skins", 4483362458)
-
--- Combat UI
-CombatTab:CreateSection("Aimbot Settings")
-CombatTab:CreateToggle({
-   Name = "Enable Aimbot",
-   CurrentValue = false,
-   Callback = function(Value) Config.Aimbot.Enabled = Value end,
-})
-CombatTab:CreateKeybind({
-   Name = "Aimbot Activation Key",
-   CurrentKey = Enum.KeyCode.MouseButton2,
-   Callback = function(Key) Config.Aimbot.ActivationKey = Key end,
-})
-CombatTab:CreateSlider({
-   Name = "Aimbot Smoothness",
-   Range = {0.1, 1},
-   Increment = 0.1,
-   Suffix = "Smooth",
-   CurrentValue = 0.5,
-   Callback = function(Value) Config.Aimbot.Smoothness = Value end,
-})
-CombatTab:CreateSlider({
-   Name = "Aimbot FOV",
-   Range = {10, 500},
-   Increment = 1,
-   Suffix = "px",
-   CurrentValue = 100,
-   Callback = function(Value) Config.Aimbot.FOV = Value end,
-})
-CombatTab:CreateToggle({
-   Name = "Show Aimbot FOV",
-   CurrentValue = true,
-   Callback = function(Value) Config.Aimbot.ShowFOV = Value end,
-})
-
-CombatTab:CreateSection("Silent Aim Settings")
-CombatTab:CreateToggle({
-   Name = "Enable Silent Aim",
-   CurrentValue = false,
-   Callback = function(Value) Config.SilentAim.Enabled = Value end,
-})
-CombatTab:CreateSlider({
-   Name = "Silent Aim FOV",
-   Range = {10, 500},
-   Increment = 1,
-   Suffix = "px",
-   CurrentValue = 100,
-   Callback = function(Value) Config.SilentAim.FOV = Value end,
-})
-CombatTab:CreateToggle({
-   Name = "Show Silent Aim FOV",
-   CurrentValue = true,
-   Callback = function(Value) Config.SilentAim.ShowFOV = Value end,
-})
-
--- Visuals UI
-VisualsTab:CreateSection("ESP Settings")
-VisualsTab:CreateToggle({
-   Name = "ESP Box",
-   CurrentValue = false,
-   Callback = function(Value) Config.ESP.Box = Value end,
-})
-VisualsTab:CreateToggle({
-   Name = "ESP Skeleton",
-   CurrentValue = false,
-   Callback = function(Value) Config.ESP.Skeleton = Value end,
-})
-VisualsTab:CreateToggle({
-   Name = "Team Check",
-   CurrentValue = true,
-   Callback = function(Value) Config.ESP.TeamCheck = Value end,
-})
-
--- Skins UI
-SkinsTab:CreateSection("Skin Unlocker")
-
-local Knives = {"Butterfly Knife", "Karambit", "M9 Bayonet", "Flip Knife", "Gut Knife"}
-SkinsTab:CreateDropdown({
-   Name = "Select Knife",
-   Options = Knives,
-   CurrentOption = "Butterfly Knife",
-   Callback = function(Option)
-       Config.Skins.SelectedKnife = Option
-       Rayfield:Notify({Title = "Knife Selected", Content = "Equip your knife to see changes.", Duration = 3})
-   end,
-})
-
-SkinsTab:CreateButton({
-   Name = "Apply Skin Changer",
-   Callback = function()
-       -- BloxStrike Skin Changer Logic
-       local function applySkin()
-           local camera = workspace.CurrentCamera
-           local RS = game:GetService("ReplicatedStorage")
-           
-           local function getKnife()
-               return camera:FindFirstChild("T Knife") or camera:FindFirstChild("CT Knife")
-           end
-
-           local currentKnife = getKnife()
-           if currentKnife then
-               -- Basic skin swap logic: In BloxStrike, we clone the asset from RS
-               local template = RS.Assets.Weapons:FindFirstChild(Config.Skins.SelectedKnife)
-               local currentKnifeModel = getKnife()
-               if template and currentKnifeModel then
-                   -- This is a client-side visual modification. It will not affect other players.
-                   -- We need to find the actual weapon model in the player's character and change its mesh/texture.
-                   -- This is a simplified example. A full implementation would involve more complex asset manipulation.
-                   local weaponModel = currentKnifeModel:FindFirstChildOfClass("Model") or currentKnifeModel:FindFirstChildOfClass("Part")
-                   if weaponModel then
-                       -- Attempt to change the mesh or texture of the weapon model
-                       -- This part is highly game-specific and might require deeper reverse engineering.
-                       -- For now, we'll just notify the user that it's applied client-side.
-                       
-                       -- Example: Replace the current knife's mesh with the selected one (highly simplified)
-                       local currentKnifeMesh = weaponModel:FindFirstChildOfClass("MeshPart") or weaponModel:FindFirstChildOfClass("Part")
-                       local newKnifeMesh = template:FindFirstChildOfClass("MeshPart") or template:FindFirstChildOfClass("Part")
-
-                       if currentKnifeMesh and newKnifeMesh then
-                           currentKnifeMesh.MeshId = newKnifeMesh.MeshId
-                           currentKnifeMesh.TextureID = newKnifeMesh.TextureID
-                           Rayfield:Notify({Title = "Success", Content = "Skin applied client-side! Re-equip to refresh.", Duration = 3})
-                       else
-                           Rayfield:Notify({Title = "Error", Content = "Could not find mesh parts to apply skin.", Duration = 3})
-                       end
-                   else
-                       Rayfield:Notify({Title = "Error", Content = "Could not find weapon model to apply skin.", Duration = 3})
-                   end
-               else
-                   Rayfield:Notify({Title = "Error", Content = "Selected knife or current knife not found.", Duration = 3})
-               end
-           end
-       end
-       applySkin()
-   end,
-})
 
 -- Helper Functions
 local function GetClosestPlayer(fov)
@@ -255,41 +71,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-
-    -- Update FOV Circles
-    AimbotFOV.Visible = Config.Aimbot.ShowFOV and Config.Aimbot.Enabled
-    AimbotFOV.Radius = Config.Aimbot.FOV
-    AimbotFOV.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-
-    SilentAimFOV.Visible = Config.SilentAim.ShowFOV and Config.SilentAim.Enabled
-    SilentAimFOV.Radius = Config.SilentAim.FOV
-    SilentAimFOV.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 end)
-
--- Silent Aim Logic (Hooking Metatable)
-local mt = getrawmetatable(game)
-local oldNamecall = mt.__namecall
-setreadonly(mt, false)
-
-mt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    local args = {...}
-
-    if Config.SilentAim.Enabled and method == "FireServer" and (self.Name == "ShootEvent" or self.Name == "Fire") then -- Common shoot event names
-        local target = GetClosestPlayer(Config.SilentAim.FOV)
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            -- Redirect bullet to head with a hit chance
-            if math.random(1, 100) <= Config.SilentAim.HitChance then
-                args[1] = target.Character.Head.Position
-            end
-            return oldNamecall(self, unpack(args))
-        end
-    end
-
-    return oldNamecall(self, ...)
-end)
-
-setreadonly(mt, true)
 
 -- ESP Logic
 local playerESPTable = {}
@@ -420,9 +202,5 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
-Rayfield:Notify({
-   Title = "Script Loaded",
-   Content = "BloxStrike Hub is ready to use!",
-   Duration = 5,
-   Image = 4483362458,
-})
+-- No Rayfield notifications as there is no UI
+-- print("BloxStrike Simplified Script Loaded!") -- For console output if needed
